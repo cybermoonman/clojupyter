@@ -2,7 +2,7 @@
   (:require [clojupyter.jupmsg-specs :as jsp]
             [clojupyter.specs :as sp]
             [clojupyter.kernel.stacktrace :as stacktrace]
-            [clojupyter.kernel.version :as ver]
+            [clojupyter]
             [clojupyter.log :as log]
             [clojupyter.messages-specs :as msp]
             [clojupyter.util :as u]
@@ -11,7 +11,7 @@
             [clojure.spec.test.alpha :refer [instrument]]
             [clojure.string :as str]
             [clojure.walk :as walk]
-            [io.simplect.compose :refer [C def- fmap p P sdefn >->> >>->]]))
+            [io.simplect.compose :refer [C def- fmap p sdefn]]))
 
 (def PROTOCOL-VERSION "5.2")
 
@@ -310,8 +310,8 @@
                           (.-buffers buffers))]
         (assert (s/valid? ::sp/byte-arrays envelope))
         (->> (concat envelope
-                     [u/IDSMSG-BYTES (u/get-bytes signature)]
-                     (mapv u/get-bytes payload-vec)
+                     [u/IDSMSG-BYTES (u/string->bytes signature)]
+                     (mapv u/string->bytes payload-vec)
                      byte-buffers)
              vec
              (s/assert ::msp/frames)))))
@@ -348,9 +348,9 @@
          metadata	(or rsp-metadata {})
          rsp-buffers	(or rsp-buffers [])
          envelope	(if (= rsp-socket :iopub_port)
-                          [(u/get-bytes rsp-msgtype)]
+                          [(u/string->bytes rsp-msgtype)]
                           (message-envelope req-message))
-         signature	(u/get-bytes "")]
+         signature	(u/string->bytes "")]
      (make-jupmsg envelope signature header parent-header metadata rsp-content rsp-buffers))))
 
 ;;; ------------------------------------------------------------------------------------------------------------------------
@@ -540,7 +540,7 @@
   (s/cat :opts (s/? map?))
   ([protocol-version] (kernel-info-reply-content protocol-version {}))
   ([protocol-version {:keys [banner clj-ver help-links implementation version-string]}]
-   (let [version-string		(or version-string (ver/version-string) "clojupyter-0.0.0")
+   (let [version-string		(or version-string clojupyter/*version* "clojupyter-0.0.0")
          banner			(or banner (str "Clojupyter (" version-string ")"))
          clj-ver		(or clj-ver (clojure-version))
          help-links		(or help-links [])
